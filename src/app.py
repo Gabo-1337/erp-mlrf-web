@@ -294,7 +294,7 @@ satisfaction_level_cpf_input = dbc.Row(
 )
 
 satisfaction_level_cpf_input.validate = validator.validate_float
-satisfaction_level_cpf_input.invalid_feedback = "Please toggle a float number between 0.01 and 0.99."
+satisfaction_level_cpf_input.invalid_feedback = "Please toggle or input a float number between 0.01 and 1.00"
 
 # -------------------------------------------------------------------------------------------------------
 # * number_project_cpf_input
@@ -306,7 +306,7 @@ number_project_cpf_input = dbc.Row(
             dbc.Input(
                 type="number",
                 id="number_project_cpf",
-                placeholder="Please toggle an integer between 1 and 10",
+                placeholder="Please toggle or input an integer between 1 and 10",
                 debounce=True,
                 min=1,
                 max=10,
@@ -319,7 +319,7 @@ number_project_cpf_input = dbc.Row(
 )
 
 number_project_cpf_input.validate = validator.validate_integer
-number_project_cpf_input.invalid_feedback = "Please toggle or input an integer between 1 and 10."
+number_project_cpf_input.invalid_feedback = "Please toggle or input an integer between 1 and 10"
 
 # -------------------------------------------------------------------------------------------------------
 # * average_monthly_hours_cpf_input
@@ -331,7 +331,7 @@ average_monthly_hours_cpf_input = dbc.Row(
             dbc.Input(
                 type="number",
                 id="average_monthly_hours_cpf",
-                placeholder="Please toggle an integer number between 1 and 310",
+                placeholder="Please toggle or input an integer number between 1 and 310",
                 debounce=True,
                 min=1,
                 max=310,
@@ -344,7 +344,7 @@ average_monthly_hours_cpf_input = dbc.Row(
 )
 
 average_monthly_hours_cpf_input.validate = validator.validate_float_range
-average_monthly_hours_cpf_input.invalid_feedback = "Please toggle an integer number between 1 and 310."
+average_monthly_hours_cpf_input.invalid_feedback = "Please toggle or input an integer number between 1 and 310"
 
 # -------------------------------------------------------------------------------------------------------
 # * time_spend_company_cpf_input
@@ -369,7 +369,7 @@ time_spend_company_cpf_input = dbc.Row(
 )
 
 time_spend_company_cpf_input.validate = validator.validate_integer_range
-time_spend_company_cpf_input.invalid_feedback = "Please toggle or input an integer number between 1 and 10."
+time_spend_company_cpf_input.invalid_feedback = "Please toggle or input an integer number between 1 and 10"
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -410,7 +410,7 @@ department_cpf_input = dbc.Form(
                         id="department_cpf",
                         options=[
                             {"label": "IT", "value": "IT"},
-                            {"label": "Random Department", "value": "RandD"},
+                            {"label": "Research and Development", "value": "RandD"},
                             {"label": "Accounting", "value": "accounting"},
                             {"label": "HR", "value": "hr"},
                             {"label": "Management", "value": "management"},
@@ -463,7 +463,6 @@ custom_prediction_form = dbc.Form(
 # * program starts here
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
-server = app.server
 app.title = "Employee Retention Prediction Model"
 
 app.layout = html.Div(
@@ -476,7 +475,7 @@ app.layout = html.Div(
                     className="header-title",
                 ),
                 html.P(
-                    children=("A Machine learning approach using random forest classifier"),
+                    children=("A Machine Learning Approach using Random Forest Classifier"),
                     className="header-description",
                 ),
             ],
@@ -528,4 +527,4 @@ def update_output(n_clicks, s_l, n_p, amh, tsc, sal, dep):
         return (pred_output)
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server()

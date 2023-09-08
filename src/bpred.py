@@ -1,10 +1,11 @@
+import os
+
+import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-import joblib
 
 def make_prediction(s_l, n_p, amh, tsc, sal, dep):
-
 # -------------------------------------------------------------------------------------------------------
 # * for model accuracy test
     # Implementing Random Forest model
@@ -36,7 +37,14 @@ def make_prediction(s_l, n_p, amh, tsc, sal, dep):
 # -------------------------------------------------------------------------------------------------------
 # * the model itself
 
-    model = joblib.load('employee_model.joblib')
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct the path to the file using a relative path
+    file_path = os.path.join(script_dir, 'employee_model.joblib')
+
+    # Load the file using the constructed path
+    model = joblib.load(file_path)
 
     department_type = dep
     # Custom Prediction
