@@ -464,6 +464,7 @@ custom_prediction_form = dbc.Form(
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 app.title = "Employee Retention Prediction Model"
+server = app.server
 
 app.layout = html.Div(
     children=[
