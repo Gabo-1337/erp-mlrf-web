@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 import validator
+import bpred
 
 # -------------------------------------------------------------------------------------------------------
 # * Initializations
@@ -523,7 +524,6 @@ app.layout = html.Div(
     [State('department_cpf', 'value')])
 def update_output(n_clicks, s_l, n_p, amh, tsc, sal, dep):
     if n_clicks:
-        import bpred
         pred_output = bpred.make_prediction(s_l, n_p, amh, tsc, sal, dep)
         return (pred_output)
 
