@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 # -------------------------------------------------------------------------------------------------------
 # * for model accuracy test
 # Implementing Random Forest model
-df = pd.read_csv('https://raw.githubusercontent.com/Lolimipsu/thesis-repository/main/HR_comma_sep.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/HR_comma_sep.csv')
 
 # Dropping all duplicate data
 df.drop_duplicates(inplace = True)

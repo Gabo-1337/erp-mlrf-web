@@ -6,12 +6,11 @@ import plotly.express as px
 import plotly.figure_factory as ff
 import validator
 import bpred
-
 # -------------------------------------------------------------------------------------------------------
 # * Initializations
 
 # * dataset initalization
-data = pd.read_csv("https://raw.githubusercontent.com/Lolimipsu/thesis-repository/main/HR_comma_sep.csv")
+data = pd.read_csv("https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/HR_comma_sep.csv")
 
 # * variable initializations
 left_company = data[data["left"] == 1]
@@ -483,35 +482,17 @@ app.layout = html.Div(
             ],
             className="header",
         ),
-        # * Salary and Department bar charts
-        dbc.Container([
-            bar_chart_container
-            ],
-        ),
-        # * Correlation heatmap
-        dbc.Container([
-            corr_heatmap_container
-            ],
-        ),
-        # * KDE Plot
-        dbc.Container([
-            kde_plot_container
-            ],
-        ),
-        # * Box Plot
-        dbc.Container([
-            box_plot_container
-            ],
-        ),
-        # * Custom Prediction Form
-        dbc.Container([
-            html.Hr(),
-            html.H3("Custom Prediction Input Form"),
-            custom_prediction_form
-            ],
-        ),
+        dcc.Tabs(id="tabs", value='tab-1', children=[
+            dcc.Tab(label='Bar Charts', value='tab-1'),
+            dcc.Tab(label='Heatmap', value='tab-2'),
+            dcc.Tab(label='KDE Plot', value='tab-3'),
+            dcc.Tab(label='Box Plot', value='tab-4'),
+            dcc.Tab(label='Prediction Form', value='tab-5'),
+        ]),
+        html.Div(id='tabs-content')
     ]
 )
+
 # Define a callback function that updates the value of the disabled input field when the Submit button is clicked
 @app.callback(
     Output("cpf_output", "value"),
@@ -524,8 +505,27 @@ app.layout = html.Div(
     [State('department_cpf', 'value')])
 def update_output(n_clicks, s_l, n_p, amh, tsc, sal, dep):
     if n_clicks:
+        # import bpred
         pred_output = bpred.make_prediction(s_l, n_p, amh, tsc, sal, dep)
         return (pred_output)
 
+@app.callback(Output('tabs-content', 'children'),
+              Input('tabs', 'value'))
+def render_content(tab):
+    if tab == 'tab-1':
+        return dbc.Container([bar_chart_container])
+    elif tab == 'tab-2':
+        return dbc.Container([corr_heatmap_container])
+    elif tab == 'tab-3':
+        return dbc.Container([kde_plot_container])
+    elif tab == 'tab-4':
+        return dbc.Container([box_plot_container])
+    elif tab == 'tab-5':
+        return dbc.Container([
+            html.Hr(),
+            html.H3("Custom Prediction Input Form"),
+            custom_prediction_form
+        ])
+
 if __name__ == "__main__":
-    app.run_server()
+    app.run_server(debug=True)
