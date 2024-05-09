@@ -1,8 +1,15 @@
+# Standard library imports
 import os
 
-import joblib
+# Related third party imports for data manipulation
 import pandas as pd
+
+# Related third party imports for machine learning
 from sklearn.model_selection import train_test_split
+
+# Related third party imports for model persistence
+import joblib
+
 
 # -------------------------------------------------------------------------------------------------------
 # * for model accuracy test
@@ -45,16 +52,16 @@ file_path = os.path.join(script_dir, 'employee_model.joblib')
 model = joblib.load(file_path)
 
 department_mapping = {
-    "IT":          [1,0,0,0,0,0,0,0,0],
-    "RandD":       [0,1,0,0,0,0,0,0,0],
-    "accounting":  [0,0,1,0,0,0,0,0,0],
-    "hr":          [0,0,0,1,0,0,0,0,0],
-    "management":  [0,0,0,0,1,0,0,0,0],
-    "marketing":   [0,0,0,0,0,1,0,0,0],
-    "product_mng": [0,0,0,0,0,0,1,0,0],
-    "sales":       [0,0,0,0,0,0,0,1,0],
-    "support":     [0,0,0,0,0,0,0,0,1],
-    "technical":   [0,0,0,0,0,0,0,0,0]
+    'IT':          [1,0,0,0,0,0,0,0,0],
+    'RandD':       [0,1,0,0,0,0,0,0,0],
+    'accounting':  [0,0,1,0,0,0,0,0,0],
+    'hr':          [0,0,0,1,0,0,0,0,0],
+    'management':  [0,0,0,0,1,0,0,0,0],
+    'marketing':   [0,0,0,0,0,1,0,0,0],
+    'product_mng': [0,0,0,0,0,0,1,0,0],
+    'sales':       [0,0,0,0,0,0,0,1,0],
+    'support':     [0,0,0,0,0,0,0,0,1],
+    'technical':   [0,0,0,0,0,0,0,0,0]
 }
 
 def make_prediction(s_l, n_p, amh, tsc, sal, dep):
@@ -69,11 +76,14 @@ def make_prediction(s_l, n_p, amh, tsc, sal, dep):
     # Predict
     model_score = float(model.score(x_test,y_test))
     pred_data = model.predict(prediction_data)
-    pred_output = "No output yet"
+    pred_output = ''
+    pred_to_csv = ''
+
     if pred_data == [0]:
-        # * removed "(value returned was " + str(pred_data) + ")" +
-        pred_output = ("The employee is highly likely to STAY in the company. " + " Confidence: " + ("{:.2%}".format(model_score)))
+        pred_output = ('The employee is highly likely to STAY in the company. ' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
+        pred_to_csv = ('STAY')
     else:
-        pred_output = ("The employee is highly likely to LEAVE the company. " + " Confidence: " + ("{:.2%}".format(model_score)))
-  
-    return pred_output
+        pred_output = ('The employee is highly likely to LEAVE the company. ' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
+        pred_to_csv = ('LEAVE')
+
+    return pred_output, pred_to_csv

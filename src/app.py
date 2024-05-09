@@ -1,463 +1,17 @@
-from dash import Dash, dcc, html, Input, Output, State
+# Third-party imports for web application
+from dash import Dash, dcc, html, Input, Output, State, callback_context, no_update
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import numpy as np
+
+# Related third party imports for data manipulation
 import pandas as pd
-import plotly.express as px
-import plotly.figure_factory as ff
-import validator
-import bpred
-# -------------------------------------------------------------------------------------------------------
-# * Initializations
 
-# * dataset initalization
-data = pd.read_csv("https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/HR_comma_sep.csv")
+# Local application/library specific imports
+import validator as vd
+import bpred as bp
+import cpf
+import visuals as vs
 
-# * variable initializations
-left_company = data[data["left"] == 1]
-stay_company = data[data["left"] == 0]
-
-salary_left_total = left_company.groupby("salary")["left"].count()
-salary_stay_total = stay_company.groupby("salary")["left"].count()
-
-department_left_total = left_company.groupby("Department")["left"].count()
-department_stay_total = stay_company.groupby("Department")["left"].count()
-
-# * css / ui design
-external_stylesheets = [
-    {
-        "href": ("https://fonts.googleapis.com/css2?" "family=Lato:wght@400;700&display=swap"),
-        "rel": "stylesheet",
-    },
-]
-
-# -------------------------------------------------------------------------------------------------------
-# * Salary and Department bar charts
-
-bar_chart_container = dbc.Container(
-    [
-        html.Hr(),
-        html.H3("Salary and Department Bar Charts"),
-        html.Div(
-            children=[
-                dcc.Graph(
-                    figure={
-                        "data": [
-                            {
-                                "x": salary_stay_total.index,
-                                "y": salary_stay_total.values,
-                                "type": "bar",
-                                "name": "Retained",
-                            },
-                            {
-                                "x": salary_left_total.index,
-                                "y": salary_left_total.values,
-                                "type": "bar",
-                                "name": "Left",
-                            },
-                        ],
-                        "layout": {
-                            "title": "Salary",
-                            "width": 600,
-                            "height": 449,
-                        },
-                    },
-                    style={"border": "1px solid black", "margin": "10px"},
-                ),
-                dcc.Graph(
-                    figure={
-                        "data": [
-                            {
-                                "x": department_stay_total.index,
-                                "y": department_stay_total.values,
-                                "type": "bar",
-                                "name": "Retained",
-                            },
-                            {
-                                "x": department_left_total.index,
-                                "y": department_left_total.values,
-                                "type": "bar",
-                                "name": "Left",
-                            },
-                        ],
-                        "layout": {
-                            "title": "Department",
-                            "width": 600,
-                            "height": 449,
-                        },
-                    },
-                    style={"border": "1px solid black", "margin": "10px"},
-                ),
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-    ]
-)
-
-# -------------------------------------------------------------------------------------------------------
-# * Correlation heatmap
-
-inputs = data[["satisfaction_level", "number_project", "average_montly_hours", "time_spend_company", "Department", "salary"]]
-target = data.left
-
-inputs.replace({"salary": {"low": 1, "medium": 2, "high": 3}}, inplace=True)
-
-dep_dummies = pd.get_dummies(data["Department"])
-df_with_dummies = pd.concat([inputs, dep_dummies], axis="columns")
-df_with_dummies.drop("Department", axis="columns", inplace=True)
-
-x = df_with_dummies
-y = target
-
-corr_df = pd.concat([x, y], axis="columns").corr()
-
-# Create a mask that covers the upper half of the heatmap
-mask = np.triu(np.ones_like(corr_df, dtype=bool))
-
-# Create a new correlation matrix with the upper half set to np.nan
-corr_df_masked = corr_df.where(~mask, np.nan)
-
-# where it starts
-corr_heatmap_fig = px.imshow(
-    corr_df_masked,
-    labels=dict(x="Variable", y="Variable", color="Correlation"),
-    x=corr_df.columns,
-    y=corr_df.columns,
-    color_continuous_scale="RdBu",
-)
-
-corr_heatmap_fig.update_layout(height=900)
-
-corr_heatmap_container = dbc.Container(
-    [html.Hr(), html.H3("Correlation Heatmap"), dcc.Graph(figure=corr_heatmap_fig)]
-)
-
-# -------------------------------------------------------------------------------------------------------
-# * KDE Plot
-
-kde_df = data[
-    [
-        "satisfaction_level",
-        "last_evaluation",
-        "number_project",
-        "average_montly_hours",
-        "time_spend_company",
-    ]
-]
-
-# Create the distplots
-kde_plot_figures = []
-for col in kde_df.columns:
-    kde_fig = ff.create_distplot([kde_df[col]], [col])
-    kde_fig.update_layout(width=600, height=449, title=f"{col} Distribution")
-    kde_plot_figures.append(
-        dcc.Graph(figure=kde_fig, style={"border": "1px solid black", "margin": "10px"})
-    )
-
-# this is the one we'll use to print out the charts
-kde_plot_container = dbc.Container(
-    [
-        html.Hr(),
-        html.H3("Univariate Analysis - Numerical Variables - KDE Plot"),
-        html.Div(
-            children=[
-                kde_plot_figures[0],
-                kde_plot_figures[1]
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-        html.Div(
-            children=[
-                kde_plot_figures[2],
-                kde_plot_figures[3]
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-        html.Div(
-            children=[
-                kde_plot_figures[4],
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-    ]
-)
-
-# -------------------------------------------------------------------------------------------------------
-# * Box Plot
-
-# list of the columns to plot
-box_plot_x_values = [
-    "satisfaction_level",
-    "last_evaluation",
-    "number_project",
-    "average_montly_hours",
-    "time_spend_company",
-]
-
-# Create DataFrames for employees who left and Retained in the company
-box_plot_left_df = data[data["left"] == 1]
-box_plot_stay_df = data[data["left"] == 0]
-
-# Create a list to store the box plot figures
-box_plot_figures = []
-
-# Create a box plot for each column in the box_plot_x_values list
-for col in box_plot_x_values:
-    # Create a box plot figure for the current column
-    box_fig = dcc.Graph(
-        figure={
-            "data": [
-                {"x": box_plot_stay_df[col], "type": "box", "name": "Retained"},
-                {"x": box_plot_left_df[col], "type": "box", "name": "Left"},
-            ],
-            "layout": {
-                "title": col,
-                "width": 600,
-                "height": 449,
-            },
-        },
-        style={"border": "1px solid black", "margin": "10px"},
-    )
-
-    # Add the box plot figure to the list of figures
-    box_plot_figures.append(box_fig)
-
-# this is the one we'll use to print out the charts
-box_plot_container = dbc.Container(
-    [
-        html.Hr(),
-        html.H3("Bivariate Analysis - Numerical Variables - Box Plot"),
-        html.Div(
-            children=[
-                box_plot_figures[0],
-                box_plot_figures[1],
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-        html.Div(
-            children=[
-                box_plot_figures[2],
-                box_plot_figures[3],
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-        html.Div(
-            children=[
-                box_plot_figures[4],
-            ],
-            style={
-                "display": "flex",
-                "flex-direction": "row",
-            },
-        ),
-    ]
-)
-
-# -------------------------------------------------------------------------------------------------------
-# * Custom Prediction Forms
-# * cpf means Custom Prediction forms
-
-satisfaction_level_cpf_input = dbc.Row(
-    [
-        dbc.Label("Satisfaction Level", html_for="satisfaction_level_cpf", width=2),
-        dbc.Col(
-            dbc.Input(
-                type="number",
-                id="satisfaction_level_cpf",
-                placeholder="Please toggle or input a floating point number between 0.01 and 1.00",
-                debounce=True,
-                min=0.01,
-                max=1.00,
-                step=0.01,
-            ),
-            width=10,
-        ),
-    ],
-    className="mb-3",
-)
-
-satisfaction_level_cpf_input.validate = validator.validate_float
-satisfaction_level_cpf_input.invalid_feedback = "Please toggle or input a float number between 0.01 and 1.00"
-
-# -------------------------------------------------------------------------------------------------------
-# * number_project_cpf_input
-
-number_project_cpf_input = dbc.Row(
-    [
-        dbc.Label("Number of Projects", html_for="number_project_cpf", width=2),
-        dbc.Col(
-            dbc.Input(
-                type="number",
-                id="number_project_cpf",
-                placeholder="Please toggle or input an integer between 1 and 10",
-                debounce=True,
-                min=1,
-                max=10,
-                step=1,
-            ),
-            width=10,
-        ),
-    ],
-    className="mb-3",
-)
-
-number_project_cpf_input.validate = validator.validate_integer
-number_project_cpf_input.invalid_feedback = "Please toggle or input an integer between 1 and 10"
-
-# -------------------------------------------------------------------------------------------------------
-# * average_monthly_hours_cpf_input
-
-average_monthly_hours_cpf_input = dbc.Row(
-    [
-        dbc.Label("Average Monthly Hours", html_for="average_monthly_hours_cpf", width=2),
-        dbc.Col(
-            dbc.Input(
-                type="number",
-                id="average_monthly_hours_cpf",
-                placeholder="Please toggle or input an integer number between 1 and 310",
-                debounce=True,
-                min=1,
-                max=310,
-                step=1,
-            ),
-            width=10,
-        ),
-    ],
-    className="mb-3",
-)
-
-average_monthly_hours_cpf_input.validate = validator.validate_float_range
-average_monthly_hours_cpf_input.invalid_feedback = "Please toggle or input an integer number between 1 and 310"
-
-# -------------------------------------------------------------------------------------------------------
-# * time_spend_company_cpf_input
-
-time_spend_company_cpf_input = dbc.Row(
-    [
-        dbc.Label("Time Spent in Company", html_for="time_spend_company_cpf", width=2),
-        dbc.Col(
-            dbc.Input(
-                type="number",
-                id="time_spend_company_cpf",
-                placeholder="Please toggle or input an integer number between 1 and 10",
-                debounce=True,
-                min=1,
-                max=10,
-                step=1,
-            ),
-            width=10,
-        ),
-    ],
-    className="mb-3",
-)
-
-time_spend_company_cpf_input.validate = validator.validate_integer_range
-time_spend_company_cpf_input.invalid_feedback = "Please toggle or input an integer number between 1 and 10"
-
-
-# -------------------------------------------------------------------------------------------------------
-# * salary_cpf_input
-
-salary_cpf_input = dbc.Form(
-    [
-        dbc.Row(
-            [
-                dbc.Label("Salary", html_for="salary_cpf", width=2),
-                dbc.Col(
-                    dbc.Select(
-                        id="salary_cpf",
-                        options=[
-                            {"label": "Low", "value": "1"},
-                            {"label": "Medium", "value": "2"},
-                            {"label": "High", "value": "3"},
-                        ],
-                    ),
-                    width=10,
-                ),
-            ],
-            className="mb-3",
-        )
-    ]
-)
-
-# -------------------------------------------------------------------------------------------------------
-# * department_cpf_input
-
-department_cpf_input = dbc.Form(
-    [
-        dbc.Row(
-            [
-                dbc.Label("Department", html_for="department_cpf", width=2),
-                dbc.Col(
-                    dbc.Select(
-                        id="department_cpf",
-                        options=[
-                            {"label": "IT", "value": "IT"},
-                            {"label": "Research and Development", "value": "RandD"},
-                            {"label": "Accounting", "value": "accounting"},
-                            {"label": "HR", "value": "hr"},
-                            {"label": "Management", "value": "management"},
-                            {"label": "Marketing", "value": "marketing"},
-                            {"label": "Product Management", "value": "product_mng"},
-                            {"label": "Sales", "value": "sales"},
-                            {"label": "Support", "value": "support"},
-                            {"label": "Technical", "value": "technical"},
-                        ],
-                    ),
-                    width=10,
-                ),
-            ],
-            className="mb-3",
-        )
-    ]
-)
-
-# -------------------------------------------------------------------------------------------------------
-# * prints out the prediction
-cpf_output = dbc.Row(
-    [
-        dbc.Label("Output", html_for="cpf_output", width=2),
-        dbc.Col(
-            dbc.Input(
-                id="cpf_output",
-                disabled=True
-            ),
-            width=10,
-        ),
-    ],
-    className="mb-3",
-)
-
-
-custom_prediction_form = dbc.Form(
-    [
-        satisfaction_level_cpf_input,
-        number_project_cpf_input,
-        average_monthly_hours_cpf_input,
-        time_spend_company_cpf_input,
-        salary_cpf_input,
-        department_cpf_input,
-        cpf_output,
-        html.Div(dbc.Button("Submit", id="submit-button-id", color="primary"), style={"textAlign": "center"}, n_clicks=0)
-    ]
-)
 
 # -------------------------------------------------------------------------------------------------------
 # * program starts here
@@ -468,6 +22,7 @@ server = app.server
 
 app.layout = html.Div(
     children=[
+        dcc.Store(id='kde_plot_selection_form_store'),
         html.Div(
             children=[
                 html.P(children="📊", className="header-emoji"),
@@ -487,45 +42,168 @@ app.layout = html.Div(
             dcc.Tab(label='Heatmap', value='tab-2'),
             dcc.Tab(label='KDE Plot', value='tab-3'),
             dcc.Tab(label='Box Plot', value='tab-4'),
-            dcc.Tab(label='Prediction Form', value='tab-5'),
+            dcc.Tab(label='AUROC Graph', value='tab-5'),
+            dcc.Tab(label='Prediction Form', value='tab-6'),
         ]),
         html.Div(id='tabs-content')
     ]
 )
 
-# Define a callback function that updates the value of the disabled input field when the Submit button is clicked
+# validator for the cpf inputs
 @app.callback(
-    Output("cpf_output", "value"),
-    Input("submit-button-id", "n_clicks"),
-    [State('satisfaction_level_cpf', 'value')], 
-    [State('number_project_cpf', 'value')], 
-    [State('average_monthly_hours_cpf', 'value')], 
-    [State('time_spend_company_cpf', 'value')], 
-    [State('salary_cpf', 'value')], 
-    [State('department_cpf', 'value')])
-def update_output(n_clicks, s_l, n_p, amh, tsc, sal, dep):
-    if n_clicks:
-        # import bpred
-        pred_output = bpred.make_prediction(s_l, n_p, amh, tsc, sal, dep)
-        return (pred_output)
+    [
+     Output("satisfaction_level_cpf", "className"),
+     Output("number_project_cpf", "className"),
+     Output("average_monthly_hours_cpf", "className"),
+     Output("time_spend_company_cpf", "className")
+    ],
+    [
+     Input("satisfaction_level_cpf", "value"),
+     Input("number_project_cpf", "value"),
+     Input("average_monthly_hours_cpf", "value"),
+     Input("time_spend_company_cpf", "value")
+    ]
+)
+def update_classnames(satisfaction_level, number_project, average_monthly_hours, time_spend_company):
+    return [
+        "is-valid" if vd.validate_float(satisfaction_level) else "is-invalid",
+        "is-valid" if vd.validate_integer(number_project) else "is-invalid",
+        "is-valid" if vd.validate_amh_range(average_monthly_hours) else "is-invalid",
+        "is-valid" if vd.validate_integer(time_spend_company) else "is-invalid"
+    ]
 
-@app.callback(Output('tabs-content', 'children'),
-              Input('tabs', 'value'))
-def render_content(tab):
+
+# callback function that updates the value input at satisfaction level
+# for example if user inputs .53 it turns into 0.53
+# and if user insert 53 it will become 0.53
+@app.callback(
+    Output("satisfaction_level_cpf", "value"),
+    [Input("satisfaction_level_cpf", "n_blur")],
+    [State("satisfaction_level_cpf", "value")]
+)
+def update_satisfaction_level(n_blur, value):
+    ctx = callback_context
+    if not ctx.triggered:
+        return no_update
+
+    input_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if input_id != 'satisfaction_level_cpf':
+        return no_update
+    if value is None:
+        return no_update
+
+    # Check for specific values
+    if value == 100:
+        return 1.00
+    elif value == 1:
+        return 0.01
+    elif value > 1:
+        return value / 100
+
+    return no_update
+
+
+# Callback function that updates the value of the disabled input field when the Submit button is clicked
+# This callback function also is triggered by either the "submit-button-id" or the "save-button-id"
+@app.callback(
+    [
+     # This output is used to display the prediction result
+     Output("cpf_output", "value"),
+     # This output is used to update the data in the DataTable
+     Output("cpf_output_table", "data"),
+     # This output is used to trigger the download of the DataFrame as a CSV file
+     Output("download-dataframe-csv", "data")
+    ],
+    [
+     # This input is the "Submit" button for making predictions
+     Input("submit-button-id", "n_clicks"),
+     # This input is the "Download" button for downloading the DataFrame as a CSV file
+     Input("save-button-id", "n_clicks")
+    ],
+    [
+     # These states are the inputs for making predictions
+     State('satisfaction_level_cpf', 'value'),
+     State('number_project_cpf', 'value'),
+     State('average_monthly_hours_cpf', 'value'),
+     State('time_spend_company_cpf', 'value'),
+     State('salary_cpf', 'value'),
+     State('department_cpf', 'value')
+    ]
+)
+
+def predict_or_save(n_clicks_submit, n_clicks_save, s_l, n_p, amh, tsc, sal, dep):
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id == "submit-button-id":
+        if n_clicks_submit:
+            # Check if any input is blank
+            if not all([s_l, n_p, amh, tsc, sal, dep]):
+                return "ERROR: Missing input or wrong input.", no_update, no_update
+            else:
+                # this one have 2 return values, so I arranged them this way, see the last return part on bpred for reference.
+                pred_output, pred_to_csv = bp.make_prediction(s_l, n_p, amh, tsc, sal, dep)
+                # Store output for to csv / to save file
+                cpf.to_csv_inputs.append([s_l, n_p, amh, tsc, sal, dep, pred_output])
+                # Store output for the table / used for displaying the user inputs in table
+                cpf.table_csv_inputs.append([s_l, n_p, amh, tsc, sal, dep, pred_to_csv])
+                # Convert each list in cpf.table_csv_inputs to a dictionary that is going to be used in showing user inputs
+                output_table_data = [dict(zip(cpf.table_csv_inputs_column_names, row)) for row in cpf.table_csv_inputs]
+                return pred_output, output_table_data, no_update
+
+    elif button_id == "save-button-id":
+        if n_clicks_save:
+            df_output_table_data = pd.DataFrame(cpf.table_csv_inputs, columns=cpf.table_csv_inputs_column_names)
+            csv_string = df_output_table_data.to_csv(index=False, encoding='utf-8')
+            # Clear the inputs list
+            cpf.to_csv_inputs = []
+            cpf.table_csv_inputs = []
+
+            return cpf.to_csv_inputs, cpf.table_csv_inputs, dcc.send_string(csv_string, "saved_user_inputs.csv")
+
+
+# needed for tab 3 to render the different plot types
+@app.callback(
+    Output('kde_plot_selection_form_store', 'data'),
+    [Input('kde_plot_selection_form', 'value')]
+)
+def update_store(value):
+    return value
+
+#tabs
+@app.callback(
+    Output('tabs-content', 'children'),
+    [Input('tabs', 'value'),
+     Input('kde_plot_selection_form_store', 'data')]
+)
+def render_content(tab, plot_type):
     if tab == 'tab-1':
-        return dbc.Container([bar_chart_container])
+        cpf.to_csv_inputs = []
+        cpf.table_csv_inputs = []
+        return dbc.Container([vs.bar_chart_container])
     elif tab == 'tab-2':
-        return dbc.Container([corr_heatmap_container])
+        return dbc.Container([vs.corr_heatmap_container])
     elif tab == 'tab-3':
-        return dbc.Container([kde_plot_container])
+        return dbc.Container([
+            vs.kde_plot_selection_form,
+            html.Hr(),
+            vs.kde_static_plot if plot_type == 'static_plot' else vs.kde_interactive_plot if plot_type == 'interactable_plot' else dbc.Alert('Error: Invalid plot type selected', color='danger')
+        ])
     elif tab == 'tab-4':
-        return dbc.Container([box_plot_container])
+        return dbc.Container([vs.box_plot_container])
     elif tab == 'tab-5':
+        return dbc.Container([vs.auroc_container])
+    elif tab == 'tab-6':
         return dbc.Container([
             html.Hr(),
             html.H3("Custom Prediction Input Form"),
-            custom_prediction_form
+            cpf.custom_prediction_form
         ])
 
+
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run(debug=True)
