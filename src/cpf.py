@@ -245,9 +245,9 @@ custom_prediction_form = dbc.Form(
         department_cpf_input,
         cpf_output,
         html.Div([
-            dbc.Button('Submit', id='submit-button-id', color='primary', n_clicks=0, style={'margin-right': '10px'}),
-            dbc.Button('Save inputs', id='save-button-id', n_clicks=0, style={'margin-right': '10px'}),
-            dcc.Download(id="download-dataframe-csv"),
+            dbc.Button('Submit', id='submit_button_id', color='primary', n_clicks=0, style={'margin-right': '10px'}),
+            dbc.Button('Save inputs', id='save_button_id', n_clicks=0, style={'margin-right': '10px'}),
+            dcc.Download(id="download_dataframe_csv"),
         ], style={'textAlign': 'center'}),
         html.Hr(),
         cpf_output_table

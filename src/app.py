@@ -11,7 +11,7 @@ import validator as vd
 import bpred as bp
 import cpf
 import visuals as vs
-
+import os
 
 # -------------------------------------------------------------------------------------------------------
 # * program starts here
@@ -23,6 +23,7 @@ server = app.server
 app.layout = html.Div(
     children=[
         dcc.Store(id='kde_plot_selection_form_store'),
+        dcc.Store(id='session_user_input', storage_type='session'),
         html.Div(
             children=[
                 html.P(children="📊", className="header-emoji"),
@@ -105,7 +106,7 @@ def update_satisfaction_level(n_blur, value):
 
 
 # Callback function that updates the value of the disabled input field when the Submit button is clicked
-# This callback function also is triggered by either the "submit-button-id" or the "save-button-id"
+# This callback function also is triggered by either the "submit_button_id" or the "save_button_id"
 @app.callback(
     [
      # This output is used to display the prediction result
@@ -113,13 +114,15 @@ def update_satisfaction_level(n_blur, value):
      # This output is used to update the data in the DataTable
      Output("cpf_output_table", "data"),
      # This output is used to trigger the download of the DataFrame as a CSV file
-     Output("download-dataframe-csv", "data")
+     Output("download_dataframe_csv", "data"),
+     # Session declaration so it doesn't override to_csv_inputs and table_csv_inputs
+     Output('session_user_input', 'data')
     ],
     [
      # This input is the "Submit" button for making predictions
-     Input("submit-button-id", "n_clicks"),
+     Input("submit_button_id", "n_clicks"),
      # This input is the "Download" button for downloading the DataFrame as a CSV file
-     Input("save-button-id", "n_clicks")
+     Input("save_button_id", "n_clicks")
     ],
     [
      # These states are the inputs for making predictions
@@ -128,43 +131,46 @@ def update_satisfaction_level(n_blur, value):
      State('average_monthly_hours_cpf', 'value'),
      State('time_spend_company_cpf', 'value'),
      State('salary_cpf', 'value'),
-     State('department_cpf', 'value')
+     State('department_cpf', 'value'),
+     State('session_user_input', 'data')
     ]
 )
 
-def predict_or_save(n_clicks_submit, n_clicks_save, s_l, n_p, amh, tsc, sal, dep):
+def predict_or_save(n_clicks_submit, n_clicks_save, s_l, n_p, amh, tsc, sal, dep, session_data):
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
     else:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-    if button_id == "submit-button-id":
+    if session_data is None:
+        session_data = {'to_csv_inputs': [], 'table_csv_inputs': []}
+
+    if button_id == "submit_button_id":
         if n_clicks_submit:
             # Check if any input is blank
             if not all([s_l, n_p, amh, tsc, sal, dep]):
-                return "ERROR: Missing input or wrong input.", no_update, no_update
+                return "ERROR: Missing input or wrong input.", no_update, no_update, session_data
             else:
                 # this one have 2 return values, so I arranged them this way, see the last return part on bpred for reference.
                 pred_output, pred_to_csv = bp.make_prediction(s_l, n_p, amh, tsc, sal, dep)
                 # Store output for to csv / to save file
-                cpf.to_csv_inputs.append([s_l, n_p, amh, tsc, sal, dep, pred_output])
+                session_data['to_csv_inputs'].append([s_l, n_p, amh, tsc, sal, dep, pred_output])
                 # Store output for the table / used for displaying the user inputs in table
-                cpf.table_csv_inputs.append([s_l, n_p, amh, tsc, sal, dep, pred_to_csv])
+                session_data['table_csv_inputs'].append([s_l, n_p, amh, tsc, sal, dep, pred_to_csv])
                 # Convert each list in cpf.table_csv_inputs to a dictionary that is going to be used in showing user inputs
-                output_table_data = [dict(zip(cpf.table_csv_inputs_column_names, row)) for row in cpf.table_csv_inputs]
-                return pred_output, output_table_data, no_update
+                output_table_data = [dict(zip(cpf.table_csv_inputs_column_names, row)) for row in session_data['table_csv_inputs']]
+                return pred_output, output_table_data, no_update, session_data
 
-    elif button_id == "save-button-id":
+    elif button_id == "save_button_id":
         if n_clicks_save:
-            df_output_table_data = pd.DataFrame(cpf.table_csv_inputs, columns=cpf.table_csv_inputs_column_names)
+            df_output_table_data = pd.DataFrame(session_data['table_csv_inputs'], columns=cpf.table_csv_inputs_column_names)
             csv_string = df_output_table_data.to_csv(index=False, encoding='utf-8')
             # Clear the inputs list
-            cpf.to_csv_inputs = []
-            cpf.table_csv_inputs = []
+            ses_to_csv = session_data['to_csv_inputs'] = []
+            ses_table_csv = session_data['table_csv_inputs'] = []
 
-            return cpf.to_csv_inputs, cpf.table_csv_inputs, dcc.send_string(csv_string, "saved_user_inputs.csv")
-
+            return ses_to_csv, ses_table_csv, dcc.send_string(csv_string, "saved_user_inputs.csv"), session_data
 
 # needed for tab 3 to render the different plot types
 @app.callback(
@@ -178,12 +184,14 @@ def update_store(value):
 @app.callback(
     Output('tabs-content', 'children'),
     [Input('tabs', 'value'),
-     Input('kde_plot_selection_form_store', 'data')]
+     Input('kde_plot_selection_form_store', 'data')],
+    [State('session_user_input', 'data')]
 )
-def render_content(tab, plot_type):
+def render_content(tab, plot_type, session_data):
     if tab == 'tab-1':
-        cpf.to_csv_inputs = []
-        cpf.table_csv_inputs = []
+        if session_data is not None:
+            session_data['to_csv_inputs'] = []
+            session_data['table_csv_inputs'] = []
         return dbc.Container([vs.bar_chart_container])
     elif tab == 'tab-2':
         return dbc.Container([vs.corr_heatmap_container])
@@ -205,5 +213,9 @@ def render_content(tab, plot_type):
         ])
 
 
+# if __name__ == "__main__":
+#     app.run(debug=True)
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8050))
+    app.run(host='0.0.0.0', port=port, debug=True)
