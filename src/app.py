@@ -18,6 +18,7 @@ import os
 
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.FLATLY])
 app.title = "Employee Retention Prediction Model"
+server = app.server
 
 app.layout = html.Div(
     children=[
