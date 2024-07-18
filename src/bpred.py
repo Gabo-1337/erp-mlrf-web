@@ -14,27 +14,27 @@ import joblib
 # -------------------------------------------------------------------------------------------------------
 # * for model accuracy test
 # Implementing Random Forest model
-df = pd.read_csv('https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/HR_comma_sep.csv')
+df_bpred = pd.read_csv('https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/HR_comma_sep.csv')
 
 # Dropping all duplicate data
-df.drop_duplicates(inplace = True)
+df_bpred.drop_duplicates(inplace = True)
 
 # Initializing inputs and targets
-inputs = df[['satisfaction_level','number_project','average_montly_hours','time_spend_company','Department','salary']]
-target = df.left
+bpred_inputs = df_bpred[['satisfaction_level','number_project','average_montly_hours','time_spend_company','Department','salary']]
+bpred_target = df_bpred.left
 
 # Setting all salary values in numerical values
-inputs.replace({'salary': {'low':1, 'medium':2, 'high':3}}, inplace=True)
+bpred_inputs.replace({'salary': {'low':1, 'medium':2, 'high':3}}, inplace=True)
 
-# One Hot Encoding implementation
-dep_dummies = pd.get_dummies(df['Department'])
-df_with_dummies = pd.concat([inputs,dep_dummies],axis='columns')
+# dummy variable implementation
+dep_dummies = pd.get_dummies(df_bpred['Department'])
+df_with_dummies = pd.concat([bpred_inputs,dep_dummies],axis='columns')
 df_with_dummies.drop('Department',axis='columns',inplace=True)
 df_with_dummies.drop('technical',axis='columns',inplace=True)
 
 # Implementing x and y for prediction model
 x = df_with_dummies
-y = target
+y = bpred_target
 
 # Implementing the ML Train Test Split Method
 x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=0.8)
@@ -65,13 +65,23 @@ department_mapping = {
 }
 
 def make_prediction(s_l, n_p, amh, tsc, sal, dep):
-    # Department_mapping
+    # ************************************
+    # * These are used in the cpf_output_table
+
+    # Convert department code to full name
+    orig_name_department_mapping = {'IT': 'Information Technology', 'RandD': 'Research and Development', 'accounting': 'Accounting', 'hr': 'Human Resources', 'management': 'Management', 'marketing': 'Marketing', 'product_mng': 'Product Management', 'sales': 'Sales', 'support': 'Support', 'technical': 'Technical'}
+    dep_string = orig_name_department_mapping[dep]
+
+    # Convert salary back to string
+    salary_mapping = {1:'LOW', 2:'MEDIUM', 3:'HIGH'}
+    sal_string = salary_mapping[int(sal)]
+    # ************************************
+
     d_type = department_mapping.get(dep)
-    # Defining the columns
     columns = ['satisfaction_level','number_project','average_montly_hours','time_spend_company','salary','IT','RandD','accounting','hr','management','marketing','product_mng','sales','support']
 
     # Initialization of dataframe with the custom prediction data
-    prediction_data = pd.DataFrame([[s_l, n_p, amh, tsc, sal] + d_type], columns=columns)
+    prediction_data = pd.DataFrame([[s_l, n_p, amh, tsc, int(sal)] + d_type], columns=columns)
 
     # Predict
     model_score = float(model.score(x_test,y_test))
@@ -80,10 +90,10 @@ def make_prediction(s_l, n_p, amh, tsc, sal, dep):
     pred_to_csv = ''
 
     if pred_data == [0]:
-        pred_output = ('The employee is highly likely to STAY in the company. ' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
+        pred_output = ('Employee predicted to STAY.' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
         pred_to_csv = ('STAY')
     else:
-        pred_output = ('The employee is highly likely to LEAVE the company. ' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
+        pred_output = ('Employee predicted to LEAVE.' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
         pred_to_csv = ('LEAVE')
 
-    return pred_output, pred_to_csv
+    return pred_output, pred_to_csv, sal_string, dep_string
