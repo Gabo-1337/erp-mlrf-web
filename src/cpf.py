@@ -164,7 +164,7 @@ department_cpf_input = dbc.Form(
                             {'label': '7  - Product Management', 'value': 'product_mng'},
                             {'label': '8  - Sales', 'value': 'sales'},
                             {'label': '9  - Support', 'value': 'support'},
-                            {'label': '10 - Technical', 'value': 'technical'},
+                            {'label': '0 - Technical', 'value': 'technical'},
                         ],
                     ),
                     width=10,
