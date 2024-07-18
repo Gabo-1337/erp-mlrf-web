@@ -198,7 +198,7 @@ def render_content(tab, plot_type, session_data):
         if session_data is not None:
             session_data['to_csv_inputs'] = []
             session_data['table_csv_inputs'] = []
-        return dbc.Container([vs.bar_plot_selection_form])
+        return dbc.Container([vs.bar_chart_container])
     elif tab == 'tab-2':
         if session_data is not None:
             session_data['to_csv_inputs'] = []
