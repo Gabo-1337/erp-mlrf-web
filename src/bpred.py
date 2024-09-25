@@ -10,34 +10,37 @@ from sklearn.model_selection import train_test_split
 # Related third party imports for model persistence
 import joblib
 
+# * UNIVERSAL VARIABLE
+
+universal_features = [
+    'Age_group_Young_Adults', 'Age_group_Adults',
+    'EnvironmentSatisfaction', 'JobInvolvement', 'JobLevel',
+    'JobSatisfaction', 'MonthlyIncome', 'OverTime_Yes',
+    'PerformanceRating', 'RelationshipSatisfaction', 'TotalWorkingYears',
+    'WorkLifeBalance', 'YearsAtCompany', 'YearsSinceLastPromotion'
+  ]
+
+universal_target = 'Attrition_Yes'
+
+universal_all_variable = [
+    'Age_group_Young_Adults', 'Age_group_Adults',
+    'EnvironmentSatisfaction', 'JobInvolvement', 'JobLevel',
+    'JobSatisfaction', 'MonthlyIncome', 'OverTime_Yes',
+    'PerformanceRating', 'RelationshipSatisfaction', 'TotalWorkingYears',
+    'WorkLifeBalance', 'YearsAtCompany', 'YearsSinceLastPromotion', 'Attrition_Yes'
+  ]
 
 # -------------------------------------------------------------------------------------------------------
 # * for model accuracy test
 # Implementing Random Forest model
-df = pd.read_csv('https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/HR_comma_sep.csv')
-
-# Dropping all duplicate data
-df.drop_duplicates(inplace = True)
+df_bpred = pd.read_csv('https://raw.githubusercontent.com/CS-DREAM-TEAM/assets/main/ibm_hr_acc_test.csv')
 
 # Initializing inputs and targets
-inputs = df[['satisfaction_level','number_project','average_montly_hours','time_spend_company','Department','salary']]
-target = df.left
-
-# Setting all salary values in numerical values
-inputs.replace({'salary': {'low':1, 'medium':2, 'high':3}}, inplace=True)
-
-# One Hot Encoding implementation
-dep_dummies = pd.get_dummies(df['Department'])
-df_with_dummies = pd.concat([inputs,dep_dummies],axis='columns')
-df_with_dummies.drop('Department',axis='columns',inplace=True)
-df_with_dummies.drop('technical',axis='columns',inplace=True)
-
-# Implementing x and y for prediction model
-x = df_with_dummies
-y = target
+bpred_inputs = df_bpred[universal_features]
+bpred_target = df_bpred[universal_target]
 
 # Implementing the ML Train Test Split Method
-x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=0.8)
+x_train, x_test, y_train, y_test = train_test_split(bpred_inputs, bpred_target, train_size=0.8)
 
 # -------------------------------------------------------------------------------------------------------
 # * the model itself
@@ -46,46 +49,40 @@ x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=0.8)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the path to the file using a relative path
-file_path = os.path.join(script_dir, 'employee_model.joblib')
+file_path = os.path.join(script_dir, 'rf_model_4.0.5_NOPARAM.joblib')
 
 # Load the file using the constructed path
-model = joblib.load(file_path)
+loaded_rf_model = joblib.load(file_path)
 
-department_mapping = {
-    'IT':          [1,0,0,0,0,0,0,0,0],
-    'RandD':       [0,1,0,0,0,0,0,0,0],
-    'accounting':  [0,0,1,0,0,0,0,0,0],
-    'hr':          [0,0,0,1,0,0,0,0,0],
-    'management':  [0,0,0,0,1,0,0,0,0],
-    'marketing':   [0,0,0,0,0,1,0,0,0],
-    'product_mng': [0,0,0,0,0,0,1,0,0],
-    'sales':       [0,0,0,0,0,0,0,1,0],
-    'support':     [0,0,0,0,0,0,0,0,1],
-    'technical':   [0,0,0,0,0,0,0,0,0]
+
+age_mapping = {
+    'a_gro_ya'      : [1,0],
+    'a_gro_a'       : [0,1],
+    'a_gro_ret'     : [0,0]
 }
 
-def make_prediction(s_l, n_p, amh, tsc, sal, dep):
+def make_prediction(env_s, j_stf, r_sts, pf_rt, wl_bl, j_inv, j_lvl, a_gro, ovr_t, m_inc, y_com, tw_yr, y_prm):
+    # ************************************
+    # * These are used in the cpf_output_table
 
-    # Convert department code to full name
-    orig_name_department_mapping = {'IT': 'Information Technology', 'RandD': 'Research and Development', 'accounting': 'Accounting', 'hr': 'Human Resources', 'management': 'Management', 'marketing': 'Marketing', 'product_mng': 'Product Management', 'sales': 'Sales', 'support': 'Support', 'technical': 'Technical'}
-    dep_string = orig_name_department_mapping[dep]
+    # Convert Generation Group code to full name
+    orig_name_gg_mapping = {'a_gro_ya'      : 'Young Adult (18-30)',
+                            'a_gro_a'       : 'Adult (30-60)',
+                            'a_gro_ret'     : 'Near Retirement (60+)' }
+    gen_g_string = orig_name_gg_mapping[a_gro]
 
-    # Convert salary back to string
-    salary_mapping = {1:'LOW', 2:'MEDIUM', 3:'HIGH'}
-    sal_string = salary_mapping[int(sal)]
+    # ************************************
+
+    columns = universal_features
 
     # Department_mapping
-    d_type = department_mapping.get(dep)
-
-    # Defining the columns
-    columns = ['satisfaction_level','number_project','average_montly_hours','time_spend_company','salary','IT','RandD','accounting','hr','management','marketing','product_mng','sales','support']
-
+    age_type = age_mapping.get(a_gro)
+    
     # Initialization of dataframe with the custom prediction data
-    prediction_data = pd.DataFrame([[s_l, n_p, amh, tsc, int(sal)] + d_type], columns=columns)
-
+    prediction_data = pd.DataFrame([age_type + [env_s, j_inv, j_lvl, j_stf, m_inc, ovr_t, pf_rt, r_sts, tw_yr, wl_bl, y_com, y_prm]], columns = columns)
     # Predict
-    model_score = float(model.score(x_test,y_test))
-    pred_data = model.predict(prediction_data)
+    model_score = float(loaded_rf_model.score(x_test,y_test))
+    pred_data = loaded_rf_model.predict(prediction_data)
     pred_output = ''
     pred_to_csv = ''
 
@@ -96,4 +93,4 @@ def make_prediction(s_l, n_p, amh, tsc, sal, dep):
         pred_output = ('Employee predicted to LEAVE.' + ' Confidence: ' + ('{:.2%}'.format(model_score)))
         pred_to_csv = ('LEAVE')
 
-    return pred_output, pred_to_csv, sal_string, dep_string
+    return pred_output, pred_to_csv, gen_g_string
