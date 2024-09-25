@@ -841,7 +841,7 @@ monthly_income_chart_container = dbc.Container(
 # * TAB 11 gen_group_chart_container bar plot
 
 age_bins = [18, 30, 50, 99]
-age_labels = ['Young_Adults', 'Adults', 'Near_Retirement']
+age_labels = ['Young Adults', 'Adults', 'Near Retirement']
 
 df_visuals['vis_Age_group'] = pd.cut(df_visuals['Age'], bins=age_bins, labels=age_labels, right=False)
 age_group_grouped_df = df_visuals.groupby(['vis_Age_group', 'Attrition_Yes'], observed=True).size().unstack(fill_value=0)
