@@ -205,7 +205,7 @@ def render_content(tab, plot_type, session_data):
                 ]
             ),
             dbc.Tooltip(
-                'Different ways of obtaining data may subject to usage of other values: "1 - Low" could mean <60% in a statistical sense, or it could also mean 25% in another scenario, convert your values to the current selection for determining what to input here.',
+                'Different ways of obtaining data may subject to usage of other values: "1 - Low" could mean <60% in a statistical sense, or it could also mean 25% in another scenario, convert your values to the current selection for determining what to input here. WARNING: Disabling values will change those values to default to 0, limit disabling 1-3 values only to avoid false results.',
                 target="my-target",
                 placement="left"
             ),

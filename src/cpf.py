@@ -376,7 +376,7 @@ yat_com_cpf_input.invalid_feedback = 'Please only input number equal or more tha
 
 totwork_years_cpf_input = dbc.Row(
     [
-        dbc.Label('Total Working Years:', html_for='totwork_years_cpf', width=2, id='totwork_years_tt'),
+        dbc.Label('Years of Experience:', html_for='totwork_years_cpf', width=2, id='totwork_years_tt'),
         dbc.Col(
             dbc.Input(
                 type='number',
